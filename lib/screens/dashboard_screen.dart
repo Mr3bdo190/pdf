@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-// استدعاء الشاشات اللي صممناها
+import '../services/pdf_service.dart';
 import 'files_screen.dart';
 import 'all_tools_screen.dart';
 import 'profile_screen.dart';
@@ -15,13 +16,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
-  // قائمة الشاشات اللي هيتم التنقل بينها
   final List<Widget> _screens = [
-    const _DashboardHomeView(), // الشاشة الرئيسية (فصلناها تحت)
-    const FilesScreen(),        // شاشة الملفات
-    const Scaffold(body: Center(child: Text('Scanner Screen - قريباً', style: TextStyle(fontSize: 20)))), // شاشة الماسح الضوئي المؤقتة
-    const AllToolsScreen(),     // شاشة كل الأدوات
-    const ProfileScreen(),      // شاشة البروفايل
+    const _DashboardHomeView(),
+    const FilesScreen(),
+    const Scaffold(body: Center(child: Text('Scanner Screen - قريباً', style: TextStyle(fontSize: 20)))),
+    const AllToolsScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -50,9 +50,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// فصلنا محتوى الشاشة الرئيسية في ويدجت مستقلة عشان الكود يكون أنضف
 class _DashboardHomeView extends StatelessWidget {
   const _DashboardHomeView({Key? key}) : super(key: key);
+
+  void _showMessage(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Future<void> _handleCreate(BuildContext context) async {
+    _showMessage(context, 'جاري إنشاء الملف...');
+    String? path = await PdfService.createPdf();
+    if (path != null) _showMessage(context, 'تم الحفظ في:\n$path');
+  }
+
+  Future<void> _handleMerge(BuildContext context) async {
+    List<File> files = await PdfService.pickFiles(allowMultiple: true);
+    if (files.length >= 2) {
+      _showMessage(context, 'جاري الدمج...');
+      String? path = await PdfService.mergePdfs(files);
+      if (path != null) _showMessage(context, 'تم الدمج والحفظ في:\n$path');
+    } else if (files.isNotEmpty) {
+      _showMessage(context, 'يرجى اختيار ملفين على الأقل للدمج');
+    }
+  }
+
+  Future<void> _handleSplit(BuildContext context) async {
+    List<File> files = await PdfService.pickFiles(allowMultiple: false);
+    if (files.isNotEmpty) {
+      _showMessage(context, 'جاري استخراج الصفحة الأولى...');
+      String? path = await PdfService.splitPdf(files.first);
+      if (path != null) _showMessage(context, 'تم الحفظ في:\n$path');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +116,6 @@ class _DashboardHomeView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Bar
             Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
@@ -94,7 +124,7 @@ class _DashboardHomeView extends StatelessWidget {
               ),
               child: const TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search documents, text, or tools...',
+                  hintText: 'Search documents...',
                   prefixIcon: Icon(Icons.search, color: AppColors.outline),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 15),
@@ -103,7 +133,6 @@ class _DashboardHomeView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             
-            // Quick Tools
             const Text('Quick Tools', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             GridView.count(
@@ -114,15 +143,14 @@ class _DashboardHomeView extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.2,
               children: [
-                _buildMainToolCard(),
-                _buildToolCard(Icons.edit_document, 'Edit PDF', Colors.blue),
-                _buildToolCard(Icons.call_merge, 'Merge', Colors.orange),
-                _buildToolCard(Icons.call_split, 'Split', Colors.purple),
+                _buildMainToolCard(context),
+                _buildToolCard(Icons.edit_document, 'Edit PDF', Colors.blue, () {}),
+                _buildToolCard(Icons.call_merge, 'Merge', Colors.orange, () => _handleMerge(context)),
+                _buildToolCard(Icons.call_split, 'Split', Colors.purple, () => _handleSplit(context)),
               ],
             ),
             
             const SizedBox(height: 24),
-            // Recent Files
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -142,44 +170,52 @@ class _DashboardHomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildMainToolCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: const Icon(Icons.add, color: AppColors.primary),
-          ),
-          const Spacer(),
-          const Text('Create PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-          const Text('From Scanner or Blank', style: TextStyle(color: Colors.white70, fontSize: 12)),
-        ],
+  Widget _buildMainToolCard(BuildContext context) {
+    return InkWell(
+      onTap: () => _handleCreate(context),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.primaryContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.add, color: AppColors.primary),
+            ),
+            const Spacer(),
+            const Text('Create PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text('From Scanner or Blank', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildToolCard(IconData icon, String title, Color iconColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outline.withOpacity(0.2)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: iconColor, size: 32),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
+  Widget _buildToolCard(IconData icon, String title, Color iconColor, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.outline.withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: 32),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }

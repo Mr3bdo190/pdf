@@ -1,8 +1,22 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/pdf_service.dart';
+import 'pdf_viewer_screen.dart';
 
 class FilesScreen extends StatelessWidget {
   const FilesScreen({Key? key}) : super(key: key);
+
+  // دالة لفتح واختيار ملف لعرضه
+  Future<void> _openFilePickerAndShow(BuildContext context) async {
+    List<File> files = await PdfService.pickFiles(allowMultiple: false);
+    if (files.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => PdfViewerScreen(file: files.first)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +44,6 @@ class FilesScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            // Search Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
@@ -47,7 +60,6 @@ class FilesScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Tabs
             SizedBox(
               height: 40,
               child: ListView(
@@ -61,23 +73,23 @@ class FilesScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Files List
             Expanded(
               child: ListView(
                 children: [
-                  _buildFileItem('Q3_Financial_Report_Final.pdf', '42 Pgs • 4.2 MB • Oct 24, 2023'),
-                  _buildFileItem('Client_Contract_AcmeCorp.pdf', '15 Pgs • 1.8 MB • Oct 22, 2023'),
-                  _buildFileItem('Product_Roadmap_2024.pdf', '8 Pgs • 3.1 MB • Oct 20, 2023'),
-                  _buildFileItem('Employee_Handbook_V2.pdf', '120 Pgs • 12.5 MB • Oct 15, 2023'),
+                  _buildFileItem(context, 'Q3_Financial_Report_Final.pdf', '42 Pgs • 4.2 MB • Oct 24, 2023'),
+                  _buildFileItem(context, 'Client_Contract_AcmeCorp.pdf', '15 Pgs • 1.8 MB • Oct 22, 2023'),
+                  _buildFileItem(context, 'Product_Roadmap_2024.pdf', '8 Pgs • 3.1 MB • Oct 20, 2023'),
+                  _buildFileItem(context, 'Employee_Handbook_V2.pdf', '120 Pgs • 12.5 MB • Oct 15, 2023'),
                 ],
               ),
             ),
           ],
         ),
       ),
+      // زر الإضافة العائم لفتح الملفات
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
-        onPressed: () {},
+        onPressed: () => _openFilePickerAndShow(context),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -101,40 +113,44 @@ class FilesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFileItem(String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white, width: 4),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.errorContainer,
-              borderRadius: BorderRadius.circular(8),
+  Widget _buildFileItem(BuildContext context, String title, String subtitle) {
+    return InkWell(
+      onTap: () => _openFilePickerAndShow(context), // اضغط على أي ملف ليفتح عارض الملفات كتيست
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white, width: 4),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.picture_as_pdf, color: AppColors.error),
             ),
-            child: const Icon(Icons.picture_as_pdf, color: AppColors.error),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14)),
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
-        ],
+            const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }
