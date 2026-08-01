@@ -14,10 +14,12 @@ class AppColors {
   static const Color surfaceVariant = Color(0xFFE2E2E2);
   static const Color surfaceContainer = Color(0xFFEEEEEE);
   static const Color surfaceContainerHighest = Color(0xFFE2E2E2);
+  static const Color surfaceContainerLow = Color(0xFFF3F3F3); // تم الإضافة
   
   static const Color onSurface = Color(0xFF1A1C1C);
   static const Color onSurfaceVariant = Color(0xFF434655);
   static const Color outline = Color(0xFF737686);
+  static const Color outlineVariant = Color(0xFFC3C6D7); // تم الإضافة
   
   static const Color error = Color(0xFFBA1A1A);
   static const Color errorContainer = Color(0xFFFFDAD6);

@@ -9,16 +9,18 @@ import 'package:pdf/widgets.dart' as pw;
 
 class PdfService {
   
+  // اختيار الملفات
   static Future<List<File>> pickFiles({bool allowMultiple = false, FileType type = FileType.custom, List<String>? allowedExtensions}) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: type,
-      allowedExtensions: allowedExtensions,
+      allowedExtensions: allowedExtensions ?? (type == FileType.custom ? ['pdf'] : null),
       allowMultiple: allowMultiple,
     );
     if (result != null) return result.paths.map((path) => File(path!)).toList();
     return [];
   }
 
+  // حفظ الملف في الجهاز
   static Future<String> _saveFile(List<int> bytes, String fileName) async {
     final directory = await getExternalStorageDirectory();
     final file = File('${directory!.path}/$fileName');
@@ -26,18 +28,20 @@ class PdfService {
     return file.path;
   }
 
-  // 1. إنشاء ملف PDF فارغ
+  // إنشاء ملف فارغ (ربطناها بالدالة القديمة عشان الشاشات التانية)
+  static Future<String?> createPdf() => createBlankPdf();
+
   static Future<String?> createBlankPdf() async {
     final pdf = pw.Document();
     pdf.addPage(pw.Page(
       pageFormat: p.PdfPageFormat.a4,
       build: (pw.Context context) {
-      return pw.Center(child: pw.Text("Blank Document Created with PDF Master Pro", style: const pw.TextStyle(fontSize: 24)));
+      return pw.Center(child: pw.Text("Created with PDF Master Pro", style: const pw.TextStyle(fontSize: 24)));
     }));
     return await _saveFile(await pdf.save(), 'New_PDF_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
-  // 2. تحويل الصور إلى PDF
+  // تحويل الصور لـ PDF
   static Future<String?> imagesToPdf() async {
     List<File> imageFiles = await pickFiles(allowMultiple: true, type: FileType.image);
     if (imageFiles.isEmpty) return null;
@@ -56,7 +60,7 @@ class PdfService {
     return await _saveFile(await pdf.save(), 'ImagesToPdf_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
-  // 3. التصوير بالكاميرا والتحويل لـ PDF
+  // الكاميرا لـ PDF
   static Future<String?> scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
@@ -75,7 +79,7 @@ class PdfService {
     return await _saveFile(await pdf.save(), 'Scanned_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
-  // 4. دمج الملفات
+  // دمج ملفات
   static Future<String?> mergePdfs(List<File> files) async {
     if (files.length < 2) return null;
     final PdfDocument finalDoc = PdfDocument();
@@ -89,5 +93,56 @@ class PdfService {
     final List<int> bytes = finalDoc.saveSync();
     finalDoc.dispose();
     return await _saveFile(bytes, 'Merged_${DateTime.now().millisecondsSinceEpoch}.pdf');
+  }
+
+  // تشفير الملفات
+  static Future<String?> protectPdf(File file, String password) async {
+    final PdfDocument document = PdfDocument(inputBytes: file.readAsBytesSync());
+    document.security.userPassword = password;
+    final List<int> bytes = document.saveSync();
+    document.dispose();
+    return await _saveFile(bytes, 'Protected_${DateTime.now().millisecondsSinceEpoch}.pdf');
+  }
+
+  // فصل الصفحات
+  static Future<String?> splitPdf(File file) async {
+    final PdfDocument originalDoc = PdfDocument(inputBytes: file.readAsBytesSync());
+    final PdfDocument newDoc = PdfDocument();
+    if (originalDoc.pages.count > 0) {
+      newDoc.pages.add().graphics.drawPdfTemplate(originalDoc.pages[0].createTemplate(), const Offset(0, 0));
+    }
+    final List<int> bytes = newDoc.saveSync();
+    originalDoc.dispose();
+    newDoc.dispose();
+    return await _saveFile(bytes, 'Split_${DateTime.now().millisecondsSinceEpoch}.pdf');
+  }
+
+  // إضافة علامة مائية
+  static Future<String?> watermarkPdf(File file, String watermarkText) async {
+    final PdfDocument document = PdfDocument(inputBytes: file.readAsBytesSync());
+    final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 40);
+    
+    for (int i = 0; i < document.pages.count; i++) {
+      final PdfPage page = document.pages[i];
+      final Size pageSize = page.getClientSize();
+      
+      page.graphics.save();
+      page.graphics.setTransparency(0.3);
+      page.graphics.translateTransform(pageSize.width / 2, pageSize.height / 2);
+      page.graphics.rotateTransform(-45);
+      
+      final Size textSize = font.measureString(watermarkText);
+      page.graphics.drawString(
+        watermarkText,
+        font,
+        brush: PdfBrushes.red,
+        bounds: Rect.fromLTWH(-textSize.width / 2, -textSize.height / 2, textSize.width, textSize.height)
+      );
+      page.graphics.restore();
+    }
+    
+    final List<int> bytes = document.saveSync();
+    document.dispose();
+    return await _saveFile(bytes, 'Watermarked_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 }
