@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+// استدعاء الشاشات اللي صممناها
+import 'files_screen.dart';
+import 'all_tools_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -10,6 +14,45 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+
+  // قائمة الشاشات اللي هيتم التنقل بينها
+  final List<Widget> _screens = [
+    const _DashboardHomeView(), // الشاشة الرئيسية (فصلناها تحت)
+    const FilesScreen(),        // شاشة الملفات
+    const Scaffold(body: Center(child: Text('Scanner Screen - قريباً', style: TextStyle(fontSize: 20)))), // شاشة الماسح الضوئي المؤقتة
+    const AllToolsScreen(),     // شاشة كل الأدوات
+    const ProfileScreen(),      // شاشة البروفايل
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.onSurfaceVariant,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.folder_open), label: 'Files'),
+          BottomNavigationBarItem(icon: Icon(Icons.document_scanner), label: 'Scanner'),
+          BottomNavigationBarItem(icon: Icon(Icons.construction), label: 'Tools'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+}
+
+// فصلنا محتوى الشاشة الرئيسية في ويدجت مستقلة عشان الكود يكون أنضف
+class _DashboardHomeView extends StatelessWidget {
+  const _DashboardHomeView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -95,20 +138,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildFileCard('Client_Contract_Signed_Smith.pdf', '856 KB • Yesterday'),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.onSurfaceVariant,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder_open), label: 'Files'),
-          BottomNavigationBarItem(icon: Icon(Icons.document_scanner), label: 'Scanner'),
-          BottomNavigationBarItem(icon: Icon(Icons.construction), label: 'Tools'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
       ),
     );
   }
