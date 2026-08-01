@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../services/pdf_service.dart';
 import 'files_screen.dart';
 import 'all_tools_screen.dart';
 import 'profile_screen.dart';
+import 'create_pdf_screen.dart'; // <--- ربطنا الشاشة الجديدة هنا
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -53,38 +52,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _DashboardHomeView extends StatelessWidget {
   const _DashboardHomeView({Key? key}) : super(key: key);
 
-  void _showMessage(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppColors.primary, behavior: SnackBarBehavior.floating),
-    );
-  }
-
-  Future<void> _handleCreate(BuildContext context) async {
-    _showMessage(context, 'جاري إنشاء الملف...');
-    String? path = await PdfService.createPdf();
-    if (path != null) _showMessage(context, 'تم الحفظ في:\n$path');
-  }
-
-  Future<void> _handleMerge(BuildContext context) async {
-    List<File> files = await PdfService.pickFiles(allowMultiple: true);
-    if (files.length >= 2) {
-      _showMessage(context, 'جاري الدمج...');
-      String? path = await PdfService.mergePdfs(files);
-      if (path != null) _showMessage(context, 'تم الدمج والحفظ في:\n$path');
-    } else if (files.isNotEmpty) {
-      _showMessage(context, 'يرجى اختيار ملفين على الأقل للدمج');
-    }
-  }
-
-  Future<void> _handleSplit(BuildContext context) async {
-    List<File> files = await PdfService.pickFiles(allowMultiple: false);
-    if (files.isNotEmpty) {
-      _showMessage(context, 'جاري استخراج الصفحة الأولى...');
-      String? path = await PdfService.splitPdf(files.first);
-      if (path != null) _showMessage(context, 'تم الحفظ في:\n$path');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,35 +71,12 @@ class _DashboardHomeView extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppColors.outline.withOpacity(0.3)),
-              ),
-              child: const TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search documents...',
-                  prefixIcon: Icon(Icons.search, color: AppColors.outline),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 15),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            
             const Text('Quick Tools', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             GridView.count(
@@ -143,27 +87,12 @@ class _DashboardHomeView extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.2,
               children: [
-                _buildMainToolCard(context),
+                _buildMainToolCard(context), // ده الكارت اللي هيودينا לשاشة الإنشاء
                 _buildToolCard(Icons.edit_document, 'Edit PDF', Colors.blue, () {}),
-                _buildToolCard(Icons.call_merge, 'Merge', Colors.orange, () => _handleMerge(context)),
-                _buildToolCard(Icons.call_split, 'Split', Colors.purple, () => _handleSplit(context)),
+                _buildToolCard(Icons.call_merge, 'Merge', Colors.orange, () {}),
+                _buildToolCard(Icons.call_split, 'Split', Colors.purple, () {}),
               ],
             ),
-            
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Recent Files', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('View All', style: TextStyle(color: AppColors.primary)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildFileCard('Q3_Financial_Report_Final_V2.pdf', '2.4 MB • Today, 10:42 AM'),
-            _buildFileCard('Client_Contract_Signed_Smith.pdf', '856 KB • Yesterday'),
           ],
         ),
       ),
@@ -172,7 +101,8 @@ class _DashboardHomeView extends StatelessWidget {
 
   Widget _buildMainToolCard(BuildContext context) {
     return InkWell(
-      onTap: () => _handleCreate(context),
+      // التوجيه לשاشة الإنشاء الجديدة
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePdfScreen())),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -216,42 +146,6 @@ class _DashboardHomeView extends StatelessWidget {
             Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFileCard(String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outline.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.errorContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.picture_as_pdf, color: AppColors.error),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
-              ],
-            ),
-          ),
-          const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
-        ],
       ),
     );
   }
