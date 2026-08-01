@@ -13,10 +13,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false, // ده بيمنع ظهور زرار الرجوع التلقائي
         title: const Text('Profile', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
