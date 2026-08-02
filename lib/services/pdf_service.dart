@@ -7,15 +7,14 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:pdf/pdf.dart' as p;
 import 'package:pdf/widgets.dart' as pw;
 
-// تحديث الكلاس عشان يدعم الرسم والألوان
 class CanvasElement {
-  final String type; // 'text', 'image', 'path'
+  final String type;
   final String? text;
   final File? imageFile;
   final Offset position;
   final double fontSize;
-  final List<Offset>? pathPoints; // لتخزين إحداثيات الرسم
-  final Color color; // لون النص أو الرسم
+  final List<Offset>? pathPoints;
+  final Color color;
 
   CanvasElement({
     required this.type,
@@ -42,7 +41,6 @@ class PdfService {
     return file.path;
   }
 
-  // تحويل الـ Canvas التفاعلي لملف PDF حقيقي مع دعم الرسم
   static Future<String?> exportCustomPdf(List<CanvasElement> elements, Size canvasSize) async {
     final pdf = pw.Document();
     const double pdfWidth = 595.0;
@@ -56,7 +54,13 @@ class PdfService {
       build: (pw.Context context) {
         return pw.Stack(
           children: elements.map((el) {
-            final p.PdfColor pdfColor = p.PdfColor(el.color.red / 255, el.color.green / 255, el.color.blue / 255, el.color.opacity);
+            // حل مشكلة الألوان بشكل متوافق تماماً
+            final p.PdfColor pdfColor = p.PdfColor(
+              el.color.red / 255.0, 
+              el.color.green / 255.0, 
+              el.color.blue / 255.0, 
+              el.color.alpha / 255.0
+            );
             
             if (el.type == 'text') {
               final double pdfX = el.position.dx * scaleX;
@@ -76,14 +80,14 @@ class PdfService {
               );
             } 
             else if (el.type == 'path' && el.pathPoints != null && el.pathPoints!.isNotEmpty) {
-              // تحويل مسارات الرسم (الفري هاند) إلى خطوط فيكتور عالية الجودة
               return pw.Positioned(
                 left: 0, bottom: 0,
                 child: pw.CustomPaint(
                   size: const p.PdfPoint(pdfWidth, pdfHeight),
                   painter: (p.PdfGraphics canvas, p.PdfPoint size) {
-                    canvas.setColor(pdfColor);
-                    canvas.setLineWidth(3);
+                    // التعديل الجوهري هنا (استخدام setStrokeColor بدل setColor اللي مش موجودة)
+                    canvas.setStrokeColor(pdfColor);
+                    canvas.setLineWidth(3.0);
                     for (int i = 0; i < el.pathPoints!.length - 1; i++) {
                       final p1 = el.pathPoints![i];
                       final p2 = el.pathPoints![i + 1];
@@ -106,29 +110,40 @@ class PdfService {
     return await _saveFile(await pdf.save(), 'Custom_Draft_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
-  // بقية الدوال زي ما هي بدون تغيير
   static Future<String?> createBlankPdf() async {
     final pdf = pw.Document();
-    pdf.addPage(pw.Page(pageFormat: p.PdfPageFormat.a4, build: (context) => pw.Center(child: pw.Text("PDF Master Pro", style: const pw.TextStyle(fontSize: 24)))));
+    pdf.addPage(pw.Page(
+      pageFormat: p.PdfPageFormat.a4, 
+      build: (pw.Context context) => pw.Center(child: pw.Text("PDF Master Pro", style: const pw.TextStyle(fontSize: 24)))
+    ));
     return await _saveFile(await pdf.save(), 'New_PDF_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
+
   static Future<String?> imagesToPdf() async {
     List<File> imageFiles = await pickFiles(allowMultiple: true, type: FileType.image);
     if (imageFiles.isEmpty) return null;
     final pdf = pw.Document();
     for (var file in imageFiles) {
-      pdf.addPage(pw.Page(pageFormat: p.PdfPageFormat.a4, build: (context) => pw.Center(child: pw.Image(pw.MemoryImage(file.readAsBytesSync())))));
+      pdf.addPage(pw.Page(
+        pageFormat: p.PdfPageFormat.a4, 
+        build: (pw.Context context) => pw.Center(child: pw.Image(pw.MemoryImage(file.readAsBytesSync())))
+      ));
     }
     return await _saveFile(await pdf.save(), 'ImagesToPdf_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
+
   static Future<String?> scanFromCamera() async {
     final ImagePicker picker = ImagePicker();
     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
     if (photo == null) return null;
     final pdf = pw.Document();
-    pdf.addPage(pw.Page(pageFormat: p.PdfPageFormat.a4, build: (context) => pw.Center(child: pw.Image(pw.MemoryImage(File(photo.path).readAsBytesSync())))));
+    pdf.addPage(pw.Page(
+      pageFormat: p.PdfPageFormat.a4, 
+      build: (pw.Context context) => pw.Center(child: pw.Image(pw.MemoryImage(File(photo.path).readAsBytesSync())))
+    ));
     return await _saveFile(await pdf.save(), 'Scanned_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
+
   static Future<String?> mergePdfs(List<File> files) async {
     if (files.length < 2) return null;
     final PdfDocument finalDoc = PdfDocument();
@@ -141,6 +156,7 @@ class PdfService {
     finalDoc.dispose();
     return await _saveFile(bytes, 'Merged_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
+
   static Future<String?> protectPdf(File file, String password) async {
     final PdfDocument doc = PdfDocument(inputBytes: file.readAsBytesSync());
     doc.security.userPassword = password;
@@ -148,6 +164,7 @@ class PdfService {
     doc.dispose();
     return await _saveFile(bytes, 'Protected_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
+
   static Future<String?> splitPdf(File file) async {
     final PdfDocument oDoc = PdfDocument(inputBytes: file.readAsBytesSync());
     final PdfDocument nDoc = PdfDocument();
